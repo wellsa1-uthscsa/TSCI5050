@@ -44,6 +44,7 @@ whatisthis <- function(xx){
 #' # R basic syntax
 #'
 #' ## Assignment
+#' 
 #'
 #' To store a value as variable `foo` in R the convention is to use the
 #' `<-` operator, not `=`. This makes it easier to distinguish stand-alone
@@ -340,16 +341,20 @@ example1 <- dtset
 example2 <- example1$Birthweight.sav
 
 #+ file_import, echo = FALSE
-# #' ## Importing a File
-# birthweight <- import("/Users/harshitgarg/Desktop/projects/tsci/TSCI 5050 self/dataset/Birthweight.sav")
-#
-# #' ## Introduction to `dplyr`
-# mutate(birthweight, AGE=AGE*12) %>% View() # converting age to months
-# mutate(birthweight, AGEMonths =AGE*12) %>% head() # converting age to months and adding as column
-# mutate(birthweight, AGEMonths = AGE*12, AGEdays= AGEMonths*30.25) %>% View
-# table(birthweight$RACE) # extract a column from a dataset
-# with(birthweight, case_when(RACE== 1~ "Caucasian", RACE== 2~"ASIAN", RACE== 3~ "AFRICAN AMERICAN/BLACK", TRUE~ as.character(RACE))) %>% table()
-#
+#' ## Exporting and Importing a File
+#' To export a file, use export() command, then include dataframe, name file with format to save it:
+#' export(starwars, "starwars.csv") <- for example, this exports the starwars data frame as a .csv
+data(starwars)
+export(starwars, "starwars.csv")
+export(starwars, "starwars.xlsx")
+export(starwars, "starwars.tsv")
+
+#' To import data, assign the desired data set to a variable, and use the import() command.
+starwars <- import("starwars.csv")
+starwars # this prints the imported table to make sure that it worked; need to know the file name and format to use this method
+
+#' ## Introduction to `dplyr`
+
 # #' Assigning Descriptive Values to a Code
 # mutate(birthweight, AGEMonths = AGE*12, AGEdays= AGEMonths*30.25,
 #        RACEName= case_when(RACE== 1~ "Caucasian",
@@ -359,26 +364,40 @@ example2 <- example1$Birthweight.sav
 #
 # summary(birthweight$BWT)
 #
-# #' ## The `summarise()` Function
-# #'
-# summary(birthweight$BWT) # gives summary of the particular column min/max, median, quartiles
-# summary(birthweight) # gives summary of all columns min/max, median, quartiles
-# summarise(birthweight) # gives columns and rows in dataset
-# summarise(birthweight, age=median(AGE)) # gives summary measure for a column
-# summarise(birthweight, age=median(AGE), height= median(HT), meanage= mean(AGE))
-# table(birthweight$SMOKE)
-# group_by(birthweight,SMOKE) %>% summarise(birthweight, age=median(AGE), height= median(HT), meanage= mean(AGE))
-# group_by(birthweight,SMOKE) %>% summarise(height= median(HT), meanage= mean(AGE))
-# group_by(birthweight,SMOKE) %>% summarise(across(where(is.numeric),mean)) # summarise dataset by group and give mean for each column
-# group_by(birthweight,SMOKE) %>% summarise(across(where(is.numeric),sd))
-#
-# group_by(birthweight,SMOKE) %>% summarise(across(where(is.numeric),mean, .names = '{.col}_mean'),
-#                                           across(where(is.numeric),sd, .names = '{.col}_sd'))  # gives mean and SD
-#
-# group_by(birthweight,SMOKE) %>% summarise(across(where(is.numeric),list(mean,sd))) # gives list of mean and SD of each column but doesnt tell the names
-# group_by(birthweight,SMOKE) %>% summarise(across(where(is.numeric),list(Mn=mean,StD=sd,Md=median,InQR=IQR))) # gives list of mean and SD and also its names
-# group_by(birthweight,SMOKE) %>% summarise(across(where(is.numeric),list(Mn=mean,StD=sd,Md=median,InQR=IQR))) %>% View # gives all the list and view it
-# group_by(birthweight,SMOKE) %>% mutate(across(where(is.numeric),list(Mn=mean,StD=sd,Md=median,InQR=IQR))) %>% View # gives new columns of aggregate function for each group
+#' ## The `summarise()` Function
+group_by(starwars, species)
+
+group_by(starwars, species) %>% summarize(
+  height = median(height, na.rm = TRUE),
+  mass = median(mass, na.rm = TRUE),
+  max_mass = max(mass, na.rm = TRUE),
+  n = n()
+)
+#' ## Mutating Tables
+mutate(starwars, bmi = mass/((height/100)^2))
+# This groups the data by species and sex, then pipes the grouped table into the mutate function.
+
+group_by(starwars, species, sex) %>% 
+# We can then use the mutate function too add columns to the table, they auto add to the end of the table.
+  mutate( 
+  bmi = mass / ((height / 100) ^ 2),
+  perc_height = percent_rank(height),
+  medheight = median(height, na.rm = TRUE),
+  sample_size = n(), # n() means sample number as defined by group_by function in this case (N = )
+  perc_height2 = sapply(height, function(xx) #sapply function used here to force 
+    # treatment of individual height values to be compared to all values, then 
+    # percentile is the output for each height
+    mean(xx > height, na.rm = TRUE)), 
+  across(is.character, ~toupper(.x)),
+  across(contains("color"), ~tolower(.x)),
+  across(any_of(c("height", "mass")), ~round(.x, -1))) %>%  # for example of across, this one changes all text columns to upper case text
+# Use the recolate function to move columns to the front of the table, in the order outlined.
+  relocate(name, perc_height2, perc_height) %>%
+  arrange(height, desc(mass))
+
+
+#' Can make new columns and then, in sequence, use those to define future columns and redefine them.
+#' Use command across() within mutate or summarize functions to perform changes to data across several columns at once.
 
 
 #' Define location of your files
